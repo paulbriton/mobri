@@ -24,15 +24,18 @@ import java.nio.file.Paths;
 
 public class Application extends Controller {
 
-    static final ConsumerKey TWITTER_KEY = new ConsumerKey(getKey("twitter"), getSecret("twitter"));
+    static final String GOOGLE_KEY = getKey("google");
 
+    static final String TWITTER_KEY = getKey("twitter");
+    static final String TWITTER_SECRET = getSecret("twitter");
+
+    static final ConsumerKey TWITTER_CONS = new ConsumerKey(TWITTER_KEY, TWITTER_SECRET);
     private static final ServiceInfo SERVICE_INFO = new ServiceInfo(
             "https://api.twitter.com/oauth/request_token",
             "https://api.twitter.com/oauth/access_token",
             "https://api.twitter.com/oauth/authorize",
-            TWITTER_KEY
+            TWITTER_CONS
     );
-
     private static final OAuth TWITTER = new OAuth(SERVICE_INFO, false);
 
     private final WSClient ws;
@@ -53,7 +56,7 @@ public class Application extends Controller {
     public Promise<Result> twitterAppOnly() {
         //OAuth2
         WSRequest request = ws.url("https://api.twitter.com/oauth2/token")
-                .setAuth(getKey("twitter"), getSecret("twitter"), WSAuthScheme.BASIC);
+                .setAuth(TWITTER_KEY, TWITTER_SECRET, WSAuthScheme.BASIC);
         WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
                 .setQueryParameter("grant_type", "client_credentials");
         JsonNode json = Json.newObject();
@@ -65,7 +68,7 @@ public class Application extends Controller {
     public Result googleAuth() {
         String url = "https://accounts.google.com/o/oauth2/v2/auth";
         url += "?response_type=code";
-        url += "&client_id="+getKey("google");
+        url += "&client_id="+GOOGLE_KEY;
         url += "&redirect_uri=http://mobri.dev.com/oauthcallback";
         url += "&scope=profile";
         return redirect(url);
@@ -99,28 +102,39 @@ public class Application extends Controller {
     }
 
     private static String getKey(String file)  {
-        try {
-            byte[] encoded = Files.readAllBytes(Paths.get(Play.application().path()+"/"+file+".json"));
-            String credentials = new String(encoded, "UTF-8");
-            JsonNode json = Json.parse(credentials);
-            return json.path("key").asText();
+        String env = file.toUpperCase() + "_KEY";
+
+        //Check environment variable
+        if (System.getenv(env) != null) {
+            return System.getenv(env);
         }
-        catch (IOException e) {
-            System.err.println("Caught IOException: " + e.getMessage());
+        // Else key is in environment variable, return it
+        else {
+            //If null read file.json
+            return processJson(file, "key");
         }
-        return "";
     }
 
     private static String getSecret(String file) {
+        String env = file.toUpperCase() + "_SECRET";
+        if (System.getenv(env) != null) {
+            return System.getenv(env);
+        }
+        else {
+            return processJson(file, "secret");
+        }
+    }
+
+    private static String processJson(String file, String val) {
         try {
             byte[] encoded = Files.readAllBytes(Paths.get(Play.application().path() + "/"+file+".json"));
             String credentials = new String(encoded, "UTF-8");
             JsonNode json = Json.parse(credentials);
-            return json.path("secret").asText();
+            return json.path(val).asText();
         }
         catch (IOException e) {
             System.err.println("Caught IOException: " + e.getMessage());
         }
-        return "";
+        return null;
     }
 }
