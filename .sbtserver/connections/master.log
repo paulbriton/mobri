@@ -1,0 +1,31 @@
+New log file opened at Tue Jan 12 09:49:05 CET 2016 by 6620@Paul-PC
+Taking next connection to: 8045
+New client attempting to connect on port: 8046-8045
+  Address = /169.254.89.230:8045
+This client on port 8046 has uuid 8f63291c-b2f4-4cfc-a911-a8ecef908049 configName activator humanReadableName Activator protocolVersion 3 featureTags Vector()
+Connected Clients: activator-8f63291c-b2f4-4cfc-a911-a8ecef908049
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 8045
