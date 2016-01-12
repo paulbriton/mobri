@@ -6,4 +6,5 @@ target
 /.project
 /.settings
 /RUNNING_PID
-/twitter.json/client_id/projectFilesBackup
+/twitter.json
+/projectFilesBackup
