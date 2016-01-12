@@ -1,7 +1,8 @@
 package controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import play.libs.F.Promise;
+import play.Play;
+import play.libs.F.*;
 import play.libs.Json;
 import play.libs.ws.WSAuthScheme;
 import play.libs.ws.WSClient;
@@ -26,28 +27,31 @@ public class Application extends Controller {
 
     @Inject WSClient ws;
     public Promise<Result> sendReq() {
-        String jsonTwitter = "";
+        String twitterCredentials;
+        JsonNode jsonTwitter = null;
+
         try {
-            byte[] encoded = Files.readAllBytes(Paths.get("../../twitter.json"));
-            jsonTwitter = new String(encoded, "UTF-8");
+            byte[] encoded = Files.readAllBytes(Paths.get(Play.application().path()+"/twitter.json"));
+            twitterCredentials = new String(encoded, "UTF-8");
+            jsonTwitter = Json.parse(twitterCredentials);
         }
         catch (Exception e) {
             System.err.println("Caught IOException: " + e.getMessage());
         }
+        if (jsonTwitter != null) {
+            String authSecret = jsonTwitter.path("secret").asText();
+            String authKey = jsonTwitter.path("key").asText();
 
-        System.out.println(jsonTwitter);
-        //WSRequest request = ws.url("https://api.twitter.com/oauth2/token").setAuth(authKey, authSecret, WSAuthScheme.BASIC);
-        //WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
-        //        .setQueryParameter("grant_type", "client_credentials");
-        //JsonNode json = Json.newObject().put("grant_type", "client_credentials");
-        //return complexRequest.post(json).map(response ->
-        //    ok(response.asJson())
-        //);
+            WSRequest request = ws.url("https://api.twitter.com/oauth2/token").setAuth(authKey, authSecret, WSAuthScheme.BASIC);
+            WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
+                    .setQueryParameter("grant_type", "client_credentials");
+            JsonNode json = Json.newObject().put("grant_type", "client_credentials");
 
-        //Promise<WSResponse> responsePromise = complexRequest.setFollowRedirects(true).post("granttype");
-        /*return responsePromise.map(response ->
-                ok("Feed title: " + response.asJson().findPath("title").asText())
-        );*/
+            return complexRequest.post(json).map(response ->
+                ok(response.asJson())
+            );
+        }
+        return null;
     }
 
 }
