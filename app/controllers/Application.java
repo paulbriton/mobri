@@ -54,23 +54,27 @@ public class Application extends Controller {
         //OAuth2
         WSRequest request = ws.url("https://api.twitter.com/oauth2/token")
                 .setAuth(getKey("twitter"), getSecret("twitter"), WSAuthScheme.BASIC);
-        WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.");
-        JsonNode json = Json.newObject().put("grant_type", "client_credentials");
-
+        WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
+                .setQueryParameter("grant_type", "client_credentials");
+        JsonNode json = Json.newObject();
         return complexRequest.post(json).map(response ->
             ok(response.asJson())
         );
     }
 
     public Result googleAuth() {
-        WSRequest request = ws.url("https://accounts.google.com/o/oauth2/v2/auth");
-        return ok(index.render("toto"));
+        String url = "https://accounts.google.com/o/oauth2/v2/auth";
+        url += "?response_type=code";
+        url += "&client_id="+getKey("google");
+        url += "&redirect_uri=http://mobri.dev.com/oauthcallback";
+        url += "&scope=profile";
+        return redirect(url);
     }
 
     public Result twitterAuth() {
         String verifier = request().getQueryString("oauth_verifier");
         if (Strings.isNullOrEmpty(verifier)) {
-            String url = routes.Application.auth().absoluteURL(request());
+            String url = routes.Application.twitterAuth().absoluteURL(request());
             RequestToken requestToken = TWITTER.retrieveRequestToken(url);
             saveSessionTokenPair(requestToken);
             return redirect(TWITTER.redirectUrl(requestToken.token));
