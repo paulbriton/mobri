@@ -4,6 +4,7 @@
 
 # Home page
 GET     /                           controllers.Application.index()
+GET     /auth                       controllers.Application.auth()
 GET     /test                       controllers.Application.test()
 GET     /sendReq                    controllers.Application.sendReq()
 

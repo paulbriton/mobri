@@ -1,31 +1,57 @@
-New log file opened at Tue Jan 12 09:49:05 CET 2016 by 6620@Paul-PC
-Taking next connection to: 8045
-New client attempting to connect on port: 8046-8045
-  Address = /169.254.89.230:8045
-This client on port 8046 has uuid 8f63291c-b2f4-4cfc-a911-a8ecef908049 configName activator humanReadableName Activator protocolVersion 3 featureTags Vector()
-Connected Clients: activator-8f63291c-b2f4-4cfc-a911-a8ecef908049
-Taking next connection to: 8045
+New log file opened at Tue Jan 12 14:42:41 CET 2016 by 3568@Paul-PC
+Taking next connection to: 9561
+New client attempting to connect on port: 9562-9561
+  Address = /169.254.89.230:9561
+This client on port 9562 has uuid 03ec2cfe-9238-4621-a4a3-82582bdb5de3 configName activator humanReadableName Activator protocolVersion 3 featureTags Vector()
+Connected Clients: activator-03ec2cfe-9238-4621-a4a3-82582bdb5de3
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
+New client attempting to connect on port: 9740-9561
+  Address = /169.254.89.230:9561
+Handshake exception on socket: 9740
+sbt.impl.ipc.HandshakeException: Unable to perform handshake
+	at sbt.impl.ipc.Peer.handshake(IPC.scala:46)
+	at sbt.impl.ipc.MultiClientServer.<init>(IPC.scala:150)
+	at sbt.server.SbtServerSocketHandler$$anon$1.run(SbtServerSocketHandler.scala:43)
+Caused by: java.net.SocketException: Software caused connection abort: recv failed
+	at java.net.SocketInputStream.socketRead0(Native Method)
+	at java.net.SocketInputStream.read(SocketInputStream.java:150)
+	at java.net.SocketInputStream.read(SocketInputStream.java:121)
+	at java.io.BufferedInputStream.fill(BufferedInputStream.java:246)
+	at java.io.BufferedInputStream.read(BufferedInputStream.java:265)
+	at java.io.DataInputStream.readInt(DataInputStream.java:387)
+	at sbt.impl.ipc.Peer.receive(IPC.scala:95)
+	at sbt.impl.ipc.Peer.handshake(IPC.scala:49)
+	... 2 more
+Taking next connection to: 9561
+New client attempting to connect on port: 9741-9561
+  Address = /169.254.89.230:9561
+This client on port 9741 has uuid be85f00a-ca67-4dfa-9d60-364a2f3b0738 configName play-fork-run humanReadableName Play Fork Run protocolVersion 1 featureTags Vector()
+Connected Clients: activator-03ec2cfe-9238-4621-a4a3-82582bdb5de3, play-fork-run-be85f00a-ca67-4dfa-9d60-364a2f3b0738
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
 Checking to see if clients are empty...
 We have 1 non-daemon clients, continuing serving connections.
-Taking next connection to: 8045
+Taking next connection to: 9561
+Checking to see if clients are empty...
+We have 1 non-daemon clients, continuing serving connections.
+Taking next connection to: 9561
