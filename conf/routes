@@ -4,9 +4,10 @@
 
 # Home page
 GET     /                           controllers.Application.index()
-GET     /auth                       controllers.Application.auth()
+GET     /twitterAuth                controllers.Application.twitterAuth()
+GET     /twitterAppOnly             controllers.Application.twitterAppOnly()
+GET     /googleAuth                 controllers.Application.googleAuth()
 GET     /test                       controllers.Application.test()
-GET     /sendReq                    controllers.Application.sendReq()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

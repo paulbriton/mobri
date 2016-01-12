@@ -26,10 +26,12 @@ public class Application extends Controller {
 
     static final ConsumerKey TWITTER_KEY = new ConsumerKey(getKey("twitter"), getSecret("twitter"));
 
-    private static final ServiceInfo SERVICE_INFO = new ServiceInfo("https://api.twitter.com/oauth/request_token",
+    private static final ServiceInfo SERVICE_INFO = new ServiceInfo(
+            "https://api.twitter.com/oauth/request_token",
             "https://api.twitter.com/oauth/access_token",
             "https://api.twitter.com/oauth/authorize",
-            TWITTER_KEY);
+            TWITTER_KEY
+    );
 
     private static final OAuth TWITTER = new OAuth(SERVICE_INFO, false);
 
@@ -48,36 +50,24 @@ public class Application extends Controller {
         return ok(index.render("HELLO"));
     }
 
-    public Promise<Result> sendReq() {
-        String twitterCredentials;
-        JsonNode jsonTwitter = null;
+    public Promise<Result> twitterAppOnly() {
+        //OAuth2
+        WSRequest request = ws.url("https://api.twitter.com/oauth2/token")
+                .setAuth(getKey("twitter"), getSecret("twitter"), WSAuthScheme.BASIC);
+        WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.");
+        JsonNode json = Json.newObject().put("grant_type", "client_credentials");
 
-        try {
-            byte[] encoded = Files.readAllBytes(Paths.get(Play.application().path()+"/twitter.json"));
-            twitterCredentials = new String(encoded, "UTF-8");
-            jsonTwitter = Json.parse(twitterCredentials);
-        }
-        catch (Exception e) {
-            System.err.println("Caught IOException: " + e.getMessage());
-        }
-        if (jsonTwitter != null) {
-            String authSecret = jsonTwitter.path("secret").asText();
-            String authKey = jsonTwitter.path("key").asText();
-
-            //OAuth2
-            WSRequest request = ws.url("https://api.twitter.com/oauth2/token").setAuth(authKey, authSecret, WSAuthScheme.BASIC);
-            WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
-                    .setQueryParameter("grant_type", "client_credentials");
-            JsonNode json = Json.newObject().put("grant_type", "client_credentials");
-
-            return complexRequest.post(json).map(response ->
-                ok(response.asJson())
-            );
-        }
-        return null;
+        return complexRequest.post(json).map(response ->
+            ok(response.asJson())
+        );
     }
 
-    public Result auth() {
+    public Result googleAuth() {
+        WSRequest request = ws.url("https://accounts.google.com/o/oauth2/v2/auth");
+        return ok(index.render("toto"));
+    }
+
+    public Result twitterAuth() {
         String verifier = request().getQueryString("oauth_verifier");
         if (Strings.isNullOrEmpty(verifier)) {
             String url = routes.Application.auth().absoluteURL(request());
