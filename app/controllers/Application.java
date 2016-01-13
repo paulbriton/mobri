@@ -69,7 +69,7 @@ public class Application extends Controller {
         String url = "https://accounts.google.com/o/oauth2/v2/auth";
         url += "?response_type=code";
         url += "&client_id="+GOOGLE_KEY;
-        url += "&redirect_uri="+routes.Application.index().absoluteURL(request(), true)+"callback";
+        url += "&redirect_uri="+routes.Application.callback().absoluteURL(request());
         url += "&scope=profile";
         return redirect(url);
     }
@@ -81,7 +81,7 @@ public class Application extends Controller {
     public Result twitterAuth() {
         String verifier = request().getQueryString("oauth_verifier");
         if (Strings.isNullOrEmpty(verifier)) {
-            String url = routes.Application.twitterAuth().absoluteURL(request());
+            String url = routes.Application.callback().absoluteURL(request());
             RequestToken requestToken = TWITTER.retrieveRequestToken(url);
             saveSessionTokenPair(requestToken);
             return redirect(TWITTER.redirectUrl(requestToken.token));
