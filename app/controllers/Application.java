@@ -69,9 +69,13 @@ public class Application extends Controller {
         String url = "https://accounts.google.com/o/oauth2/v2/auth";
         url += "?response_type=code";
         url += "&client_id="+GOOGLE_KEY;
-        url += "&redirect_uri="+routes.Application.index().absoluteURL(request());
+        url += "&redirect_uri="+routes.Application.index().absoluteURL(request())+"/callback";
         url += "&scope=profile";
         return redirect(url);
+    }
+
+    public Result callback() {
+        return ok(index.render("TOTO"));
     }
 
     public Result twitterAuth() {

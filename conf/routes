@@ -7,6 +7,7 @@ GET     /                           controllers.Application.index()
 GET     /twitterAuth                controllers.Application.twitterAuth()
 GET     /twitterAppOnly             controllers.Application.twitterAppOnly()
 GET     /googleAuth                 controllers.Application.googleAuth()
+GET     /callback                   controllers.Application.callback()
 GET     /test                       controllers.Application.test()
 
 # Map static resources from the /public folder to the /assets URL path
