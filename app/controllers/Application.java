@@ -8,6 +8,7 @@ import play.libs.F.Promise;
 import play.libs.Json;
 import play.libs.oauth.OAuth;
 import play.libs.oauth.OAuth.ConsumerKey;
+import play.libs.oauth.OAuth.OAuthCalculator;
 import play.libs.oauth.OAuth.RequestToken;
 import play.libs.oauth.OAuth.ServiceInfo;
 import play.libs.ws.WSAuthScheme;
@@ -25,6 +26,7 @@ import java.nio.file.Paths;
 public class Application extends Controller {
 
     static final String GOOGLE_KEY = getKey("google");
+    static final String GOOGLE_SECRET = getSecret("google");
 
     static final String TWITTER_KEY = getKey("twitter");
     static final String TWITTER_SECRET = getSecret("twitter");
@@ -49,10 +51,6 @@ public class Application extends Controller {
         return ok(index.render("Your new application is ready."));
     }
 
-    public Result test() {
-        return ok(index.render("HELLO"));
-    }
-
     public Promise<Result> twitterAppOnly() {
         //OAuth2
         WSRequest request = ws.url("https://api.twitter.com/oauth2/token")
@@ -69,19 +67,41 @@ public class Application extends Controller {
         String url = "https://accounts.google.com/o/oauth2/v2/auth";
         url += "?response_type=code";
         url += "&client_id="+GOOGLE_KEY;
-        url += "&redirect_uri="+routes.Application.callback().absoluteURL(request());
+        url += "&redirect_uri="+routes.Application.googleCallback().absoluteURL(request());
         url += "&scope=profile";
         return redirect(url);
     }
 
-    public Result callback() {
-        return ok(index.render("TOTO"));
+    public Promise<Result> googleCallback() {
+        String uri = request().uri();
+        String code = uri.split("=")[1];
+        session("code", code);
+        if (Strings.isNullOrEmpty(code)) {
+            return Promise.pure(redirect(routes.Application.googleAuth()));
+        }
+        else {
+            String url = "https://www.googleapis.com/oauth2/v4/token";
+            String redirectUri = routes.Application.googleCallback().absoluteURL(request());
+            return ws.url(url).setContentType("application/x-www-form-urlencoded")
+                    .post("code=" + code +
+                            "&client_id=" + GOOGLE_KEY +
+                            "&client_secret=" + GOOGLE_SECRET +
+                            "&redirect_uri=" + redirectUri +
+                            "&grant_type=authorization_code")
+                    .map(response -> {
+                        String accessToken = response.asJson().findPath("access_token").asText();
+                        if (Strings.isNullOrEmpty(accessToken)) {
+                            session("google_access_token", accessToken);
+                        }
+                        return redirect(routes.Application.index());
+                    });
+        }
     }
 
     public Result twitterAuth() {
         String verifier = request().getQueryString("oauth_verifier");
         if (Strings.isNullOrEmpty(verifier)) {
-            String url = routes.Application.callback().absoluteURL(request());
+            String url = routes.Application.twitterAuth().absoluteURL(request());
             RequestToken requestToken = TWITTER.retrieveRequestToken(url);
             saveSessionTokenPair(requestToken);
             return redirect(TWITTER.redirectUrl(requestToken.token));
@@ -89,8 +109,21 @@ public class Application extends Controller {
             RequestToken requestToken = getSessionTokenPair().get();
             RequestToken accessToken = TWITTER.retrieveAccessToken(requestToken, verifier);
             saveSessionTokenPair(accessToken);
-            return redirect(routes.Application.index());
+            return redirect(routes.Application.twitterCallback());
         }
+    }
+
+    public Promise<Result> twitterCallback() {
+        Option<RequestToken> sessionTokenPair = getSessionTokenPair();
+        if (sessionTokenPair.isDefined()) {
+            return ws.url("https://api.twitter.com/1.1/friends/ids.json")
+                    .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
+                    .get()
+                    .map(response ->
+                            ok(response.asJson())
+                    );
+        }
+        return Promise.pure(redirect(routes.Application.twitterAuth()));
     }
 
     private void saveSessionTokenPair(RequestToken requestToken) {
