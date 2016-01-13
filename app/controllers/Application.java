@@ -52,7 +52,7 @@ public class Application extends Controller {
     }
 
     public Promise<Result> twitterAppOnly() {
-        //OAuth2
+        //OAuth2 test with twitter API
         WSRequest request = ws.url("https://api.twitter.com/oauth2/token")
                 .setAuth(TWITTER_KEY, TWITTER_SECRET, WSAuthScheme.BASIC);
         WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
@@ -64,41 +64,57 @@ public class Application extends Controller {
     }
 
     public Result googleAuth() {
-        String url = "https://accounts.google.com/o/oauth2/v2/auth";
-        url += "?response_type=code";
-        url += "&client_id="+GOOGLE_KEY;
-        url += "&redirect_uri="+routes.Application.googleCallback().absoluteURL(request());
-        url += "&scope=profile";
-        return redirect(url);
+        if (Strings.isNullOrEmpty(session("credentials"))) {
+            // Redirect user to the google auth page
+            String url = "https://accounts.google.com/o/oauth2/v2/auth";
+            url += "?response_type=code";
+            url += "&client_id=" + GOOGLE_KEY;
+            url += "&redirect_uri=" + routes.Application.googleCallback().absoluteURL(request());
+            url += "&scope=profile";
+            return redirect(url);
+        }
+        else {
+            return ok(index.render("Already authenticate"));
+        }
     }
 
     public Promise<Result> googleCallback() {
-        String uri = request().uri();
-        String code = uri.split("=")[1];
-        session("code", code);
+        // Get the response code in the queryString
+        String code = request().getQueryString("code");
         if (Strings.isNullOrEmpty(code)) {
-            return Promise.pure(redirect(routes.Application.googleAuth()));
+            return Promise.pure(redirect(routes.Application.index()));
         }
+        // Get the access token to API
         else {
-            String url = "https://www.googleapis.com/oauth2/v4/token";
-            String redirectUri = routes.Application.googleCallback().absoluteURL(request());
-            return ws.url(url).setContentType("application/x-www-form-urlencoded")
-                    .post("code=" + code +
-                            "&client_id=" + GOOGLE_KEY +
-                            "&client_secret=" + GOOGLE_SECRET +
-                            "&redirect_uri=" + redirectUri +
-                            "&grant_type=authorization_code")
-                    .map(response -> {
-                        String accessToken = response.asJson().findPath("access_token").asText();
-                        if (Strings.isNullOrEmpty(accessToken)) {
-                            session("google_access_token", accessToken);
-                        }
-                        return redirect(routes.Application.index());
-                    });
+            // Check if access token is already in session
+            if (Strings.isNullOrEmpty(session("credentials"))) {
+                String url = "https://www.googleapis.com/oauth2/v4/token";
+                String redirectUri = routes.Application.googleCallback().absoluteURL(request());
+                // Access token request
+                return ws.url(url).setContentType("application/x-www-form-urlencoded")
+                        .post("code=" + code +
+                                "&client_id=" + GOOGLE_KEY +
+                                "&client_secret=" + GOOGLE_SECRET +
+                                "&redirect_uri=" + redirectUri +
+                                "&grant_type=authorization_code")
+                        .map(response -> {
+                            String json = response.asJson().toString();
+                            if (!Strings.isNullOrEmpty(json)) {
+                                // Store credentials in session
+                                session("credentials", json);
+                            }
+                            return redirect(routes.Application.index());
+                        });
+            }
+            else {
+                return Promise.pure(redirect(routes.Application.index()));
+            }
+
         }
     }
 
     public Result twitterAuth() {
+        // OAuth 1 twitter auth handler
         String verifier = request().getQueryString("oauth_verifier");
         if (Strings.isNullOrEmpty(verifier)) {
             String url = routes.Application.twitterAuth().absoluteURL(request());
@@ -119,9 +135,7 @@ public class Application extends Controller {
             return ws.url("https://api.twitter.com/1.1/friends/ids.json")
                     .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                     .get()
-                    .map(response ->
-                            ok(response.asJson())
-                    );
+                    .map(response -> ok(response.asJson()));
         }
         return Promise.pure(redirect(routes.Application.twitterAuth()));
     }
