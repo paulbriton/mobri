@@ -1,31 +1,34 @@
 package models;
 
 public class User {
-    public void setFirstname(String firstname) {
-        this.firstname = firstname;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
-    public void setLastname(String lastname) {
-        this.lastname = lastname;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    public String getFirstname() {
-
-        return firstname;
+    public String getEmail() {
+        return email;
     }
 
-    public String getLastname() {
-        return lastname;
+    public String getPassword() {
+        return password;
+    }
+
+    public String getUuid() {
+        return uuid;
     }
 
     private String uuid;
-    private String firstname;
-    private String lastname;
+    private String email;
+    private String password;
 
-    public User(String firstname, String lastname) {
+    public User(String email, String password) {
         this.uuid = java.util.UUID.randomUUID().toString();
-        this.firstname = firstname;
-        this.lastname = lastname;
+        this.email = email;
+        this.password = password;
     }
 
 }
