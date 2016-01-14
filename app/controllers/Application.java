@@ -99,15 +99,20 @@ public class Application extends Controller {
                             // Store credentials in session
                             session("credentials", json);
                         }
-                        return redirect(routes.Application.index());
+                        return redirect(routes.Application.googleCallback());
                     });
         }
         else {
             // Access token already get, make API request with it
             JsonNode json = Json.parse(session("credentials"));
-            String getUrl = "https://www.googleapis.com/plus/v1/people/me?access_token="+json.path("access_token").asText();
-            session().clear();
-            return Promise.pure(redirect(routes.Application.index()));
+            String getUrl = "https://www.googleapis.com/plus/v1/people/me/people/visible?access_token="+json.path("access_token").asText();
+            return ws.url(getUrl).get().map(
+                    response -> {
+                        String jsonRes = response.asJson().toString();
+                        System.out.println(jsonRes);
+                        return redirect(routes.Application.index());
+                    }
+            );
         }
     }
 
@@ -118,13 +123,11 @@ public class Application extends Controller {
             String url = routes.Application.twitterAuth().absoluteURL(request());
             RequestToken requestToken = TWITTER.retrieveRequestToken(url);
             saveSessionTokenPair(requestToken);
-            System.out.println("-1: "+requestToken.token);
             return redirect(TWITTER.redirectUrl(requestToken.token));
         } else {
             RequestToken requestToken = getSessionTokenPair().get();
             RequestToken accessToken = TWITTER.retrieveAccessToken(requestToken, verifier);
             saveSessionTokenPair(accessToken);
-            System.out.println("0: "+accessToken.token);
             return redirect(routes.Application.twitterCallback());
         }
     }
@@ -132,7 +135,6 @@ public class Application extends Controller {
     public Promise<Result> twitterCallback() {
         Option<RequestToken> sessionTokenPair = getSessionTokenPair();
         if (sessionTokenPair.isDefined()) {
-            System.out.println("1: "+sessionTokenPair.get().token);
             return ws.url("https://api.twitter.com/1.1/friends/ids.json")
                     .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                     .get()
@@ -140,15 +142,16 @@ public class Application extends Controller {
                         String ids = response.asJson().path("ids").toString();
                         ids = ids.replace("[","");
                         ids = ids.replace("]","");
-                        return redirect(routes.Application.twitterFriends(ids));
+                        session("ids", ids);
+                        return redirect(routes.Application.twitterFriends());
                     });
         }
         return Promise.pure(redirect(routes.Application.twitterAuth()));
     }
 
-    public Promise<Result> twitterFriends(String ids) {
+    public Promise<Result> twitterFriends() {
         Option<RequestToken> sessionTokenPair = getSessionTokenPair();
-        System.out.println("2: "+sessionTokenPair.get().token);
+        String ids = session("ids");
         return ws.url("https://api.twitter.com/1.1/users/lookup.json?user_id="+ids)
                 .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                 .get()
