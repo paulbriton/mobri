@@ -70,46 +70,44 @@ public class Application extends Controller {
             url += "?response_type=code";
             url += "&client_id=" + GOOGLE_KEY;
             url += "&redirect_uri=" + routes.Application.googleCallback().absoluteURL(request());
-            url += "&scope=profile";
+            url += "&scope=https://www.googleapis.com/auth/plus.login";
             return redirect(url);
         }
         else {
-            return ok(index.render("Already authenticate"));
+            return redirect(routes.Application.googleCallback());
         }
     }
 
+    // @TODO Use a refresh token
     public Promise<Result> googleCallback() {
         // Get the response code in the queryString
         String code = request().getQueryString("code");
-        if (Strings.isNullOrEmpty(code)) {
-            return Promise.pure(redirect(routes.Application.index()));
+        // Check if access token is already in session
+        if (Strings.isNullOrEmpty(session("credentials")) && !Strings.isNullOrEmpty(code)) {
+            String url = "https://www.googleapis.com/oauth2/v4/token";
+            String redirectUri = routes.Application.googleCallback().absoluteURL(request());
+            // Access token request
+            return ws.url(url).setContentType("application/x-www-form-urlencoded")
+                    .post("code=" + code +
+                            "&client_id=" + GOOGLE_KEY +
+                            "&client_secret=" + GOOGLE_SECRET +
+                            "&redirect_uri=" + redirectUri +
+                            "&grant_type=authorization_code")
+                    .map(response -> {
+                        String json = response.asJson().toString();
+                        if (!Strings.isNullOrEmpty(json)) {
+                            // Store credentials in session
+                            session("credentials", json);
+                        }
+                        return redirect(routes.Application.index());
+                    });
         }
-        // Get the access token to API
         else {
-            // Check if access token is already in session
-            if (Strings.isNullOrEmpty(session("credentials"))) {
-                String url = "https://www.googleapis.com/oauth2/v4/token";
-                String redirectUri = routes.Application.googleCallback().absoluteURL(request());
-                // Access token request
-                return ws.url(url).setContentType("application/x-www-form-urlencoded")
-                        .post("code=" + code +
-                                "&client_id=" + GOOGLE_KEY +
-                                "&client_secret=" + GOOGLE_SECRET +
-                                "&redirect_uri=" + redirectUri +
-                                "&grant_type=authorization_code")
-                        .map(response -> {
-                            String json = response.asJson().toString();
-                            if (!Strings.isNullOrEmpty(json)) {
-                                // Store credentials in session
-                                session("credentials", json);
-                            }
-                            return redirect(routes.Application.index());
-                        });
-            }
-            else {
-                return Promise.pure(redirect(routes.Application.index()));
-            }
-
+            // Access token already get, make API request with it
+            JsonNode json = Json.parse(session("credentials"));
+            String getUrl = "https://www.googleapis.com/plus/v1/people/me?access_token="+json.path("access_token").asText();
+            session().clear();
+            return Promise.pure(redirect(routes.Application.index()));
         }
     }
 
@@ -120,11 +118,13 @@ public class Application extends Controller {
             String url = routes.Application.twitterAuth().absoluteURL(request());
             RequestToken requestToken = TWITTER.retrieveRequestToken(url);
             saveSessionTokenPair(requestToken);
+            System.out.println("-1: "+requestToken.token);
             return redirect(TWITTER.redirectUrl(requestToken.token));
         } else {
             RequestToken requestToken = getSessionTokenPair().get();
             RequestToken accessToken = TWITTER.retrieveAccessToken(requestToken, verifier);
             saveSessionTokenPair(accessToken);
+            System.out.println("0: "+accessToken.token);
             return redirect(routes.Application.twitterCallback());
         }
     }
@@ -132,12 +132,31 @@ public class Application extends Controller {
     public Promise<Result> twitterCallback() {
         Option<RequestToken> sessionTokenPair = getSessionTokenPair();
         if (sessionTokenPair.isDefined()) {
+            System.out.println("1: "+sessionTokenPair.get().token);
             return ws.url("https://api.twitter.com/1.1/friends/ids.json")
                     .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                     .get()
-                    .map(response -> ok(response.asJson()));
+                    .map(response -> {
+                        String ids = response.asJson().path("ids").toString();
+                        ids = ids.replace("[","");
+                        ids = ids.replace("]","");
+                        return redirect(routes.Application.twitterFriends(ids));
+                    });
         }
         return Promise.pure(redirect(routes.Application.twitterAuth()));
+    }
+
+    public Promise<Result> twitterFriends(String ids) {
+        Option<RequestToken> sessionTokenPair = getSessionTokenPair();
+        System.out.println("2: "+sessionTokenPair.get().token);
+        return ws.url("https://api.twitter.com/1.1/users/lookup.json?user_id="+ids)
+                .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
+                .get()
+                .map(response -> {
+                    String toto = response.asJson().toString();
+                    System.out.println(toto);
+                    return ok(index.render(toto));
+                });
     }
 
     private void saveSessionTokenPair(RequestToken requestToken) {
