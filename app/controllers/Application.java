@@ -105,12 +105,18 @@ public class Application extends Controller {
         else {
             // Access token already get, make API request with it
             JsonNode json = Json.parse(session("credentials"));
-            String getUrl = "https://www.googleapis.com/plus/v1/people/me/people/visible?access_token="+json.path("access_token").asText();
+            String getUrl = "https://www.googleapis.com/plus/v1/people/me/people/connected?access_token="+json.path("access_token").asText();
             return ws.url(getUrl).get().map(
                     response -> {
-                        String jsonRes = response.asJson().toString();
-                        System.out.println(jsonRes);
-                        return redirect(routes.Application.index());
+                        JsonNode jsonRes = response.asJson();
+                        System.out.println(jsonRes.toString());
+                        if (Strings.isNullOrEmpty(jsonRes.path("error").path("message").toString())) {
+                            return redirect(routes.Application.index());
+                        }
+                        else {
+                            session().clear();
+                            return redirect(routes.Application.googleAuth());
+                        }
                     }
             );
         }
@@ -152,13 +158,14 @@ public class Application extends Controller {
     public Promise<Result> twitterFriends() {
         Option<RequestToken> sessionTokenPair = getSessionTokenPair();
         String ids = session("ids");
-        return ws.url("https://api.twitter.com/1.1/users/lookup.json?user_id="+ids)
+        System.out.println(ids);
+        return ws.url("https://api.twitter.com/1.1/users/lookup.json?user_id=338985020")//+ids)
                 .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                 .get()
                 .map(response -> {
-                    String toto = response.asJson().toString();
-                    System.out.println(toto);
-                    return ok(index.render(toto));
+                    String resp = response.asJson().toString();
+                    System.out.println(resp);
+                    return ok(index.render(resp));
                 });
     }
 
