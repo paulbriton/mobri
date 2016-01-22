@@ -163,10 +163,22 @@ public class Application extends Controller {
                 .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                 .get()
                 .map(response -> {
-                    String resp = response.asJson().toString();
-                    System.out.println(resp);
-                    return ok(index.render(resp));
+                    JsonNode respJson = response.asJson();
+                    System.out.println(respJson);
+                    String name = respJson.path("name").toString();
+                    String location = respJson.path("location").toString();
+
+                    JsonNode json = Json.newObject()
+                        .put("name", "toto")
+                        .put("location", "tata");
+                    ws.url("http://localhost:9200/friends/test/").post(json);
+                    return ok(index.render(respJson.toString()));
                 });
+    }
+
+    public Result deleteContacts() {
+        ws.url("http://localhost:9200/friends/").delete();
+        return ok(index.render("Your new application is ready."));
     }
 
     private void saveSessionTokenPair(RequestToken requestToken) {

@@ -40,9 +40,11 @@
                   <span class="glyphicon glyphicon-user" aria-hidden="true"></span> Import contact Twitter
                 </button>   
                 </a>
-                <button type="button" class="btn btn-mg btn-danger">
-                  <span class=" glyphicon glyphicon-trash" aria-hidden="true"></span> Supprimer tous mes contacts
-                </button>
+                <a href="@routes.Application.deleteContacts()">
+                  <button type="button" class="btn btn-mg btn-danger">
+                    <span class=" glyphicon glyphicon-trash" aria-hidden="true"></span> Supprimer tous mes contacts
+                  </button>
+                </a>
             </div>
         </div>
     </div>
