@@ -17,6 +17,7 @@ import play.libs.ws.WSRequest;
 import play.mvc.Controller;
 import play.mvc.Result;
 import views.html.index;
+import java.util.Iterator;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -165,12 +166,17 @@ public class Application extends Controller {
                 .map(response -> {
                     JsonNode respJson = response.asJson();
                     System.out.println(respJson);
-                    String name = respJson.path("name").toString();
-                    String location = respJson.path("location").toString();
-
+                    Iterator<JsonNode> jsonIterator = respJson.elements();
+                    String name = "";
+                    String location = "";
+                    while (jsonIterator.hasNext()) {
+                        JsonNode j = jsonIterator.next();
+                        name = j.path("name").toString();
+                        location = j.path("location").toString();
+                    }
                     JsonNode json = Json.newObject()
-                        .put("name", "toto")
-                        .put("location", "tata");
+                        .put("name", name)
+                        .put("location", location);
                     ws.url("http://localhost:9200/friends/test/").post(json);
                     return ok(index.render(respJson.toString()));
                 });
