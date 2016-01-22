@@ -44,6 +44,8 @@ public class Application extends Controller {
     );
     private static final OAuth TWITTER = new OAuth(SERVICE_INFO, false);
 
+    private final String ELASTICSEARCH_URL = "http://localhost:9200";
+
     private final WSClient ws;
 
     @Inject
@@ -54,13 +56,14 @@ public class Application extends Controller {
        
     // @TODO Handle json list
     public Promise<Result> index() {
-        return ws.url("http://localhost:9200/friends/_search").get().map(
+        // Get all indexed contacts
+        return ws.url(ELASTICSEARCH_URL+"/friends/_search").get().map(
             response -> {
                         JsonNode jsonRes = response.asJson();
                         String jsonString = jsonRes.path("hits").path("hits").toString();
-                        System.out.println("TOTO: "+jsonString);
+                        System.out.println("ELASTICSEARCH: "+jsonString);
                         if (jsonRes.path("total").asText() == "0") {
-                            return ok(index.render("toto"));
+                            return ok(index.render("No contacts"));
                         }
                         else {
                             //ObjectMapper mapper = new ObjectMapper();
@@ -77,8 +80,7 @@ public class Application extends Controller {
                 .setAuth(TWITTER_KEY, TWITTER_SECRET, WSAuthScheme.BASIC);
         WSRequest complexRequest = request.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8.")
                 .setQueryParameter("grant_type", "client_credentials");
-        JsonNode json = Json.newObject();
-        return complexRequest.post(json).map(response ->
+        return complexRequest.post(Json.newObject()).map(response ->
             ok(response.asJson())
         );
     }
@@ -94,6 +96,7 @@ public class Application extends Controller {
             return redirect(url);
         }
         else {
+            // Redirect without code in url
             return redirect(routes.Application.googleCallback());
         }
     }
@@ -102,7 +105,7 @@ public class Application extends Controller {
     public Promise<Result> googleCallback() {
         // Get the response code in the queryString
         String code = request().getQueryString("code");
-        // Check if access token is already in session
+        // Check if access token is already in session and if the code has been send
         if (Strings.isNullOrEmpty(session("credentials")) && !Strings.isNullOrEmpty(code)) {
             String url = "https://www.googleapis.com/oauth2/v4/token";
             String redirectUri = routes.Application.googleCallback().absoluteURL(request());
@@ -129,7 +132,7 @@ public class Application extends Controller {
             return ws.url(getUrl).get().map(
                     response -> {
                         JsonNode jsonRes = response.asJson();
-                        System.out.println(jsonRes.toString());
+                        System.out.println("GOOGLE_API_FRIENDS: "+jsonRes.toString());
                         if (Strings.isNullOrEmpty(jsonRes.path("error").path("message").toString())) {
                             return redirect(routes.Application.index());
                         }
@@ -143,7 +146,7 @@ public class Application extends Controller {
     }
 
     public Result twitterAuth() {
-        // OAuth 1 twitter auth handler
+        // OAuth 1 twitter auth handler see play doc for example
         String verifier = request().getQueryString("oauth_verifier");
         if (Strings.isNullOrEmpty(verifier)) {
             String url = routes.Application.twitterAuth().absoluteURL(request());
@@ -160,7 +163,9 @@ public class Application extends Controller {
 
     public Promise<Result> twitterCallback() {
         Option<RequestToken> sessionTokenPair = getSessionTokenPair();
+        // Check if token is in session
         if (sessionTokenPair.isDefined()) {
+            // Make a request to twitter api to get all friends ID
             return ws.url("https://api.twitter.com/1.1/friends/ids.json")
                     .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
                     .get()
@@ -168,41 +173,57 @@ public class Application extends Controller {
                         String ids = response.asJson().path("ids").toString();
                         ids = ids.replace("[","");
                         ids = ids.replace("]","");
+                        // Store friends IDS in session
                         session("ids", ids);
                         return redirect(routes.Application.twitterFriends());
                     });
         }
+        // No tokens redirect to authentification
         return Promise.pure(redirect(routes.Application.twitterAuth()));
     }
 
     public Promise<Result> twitterFriends() {
         Option<RequestToken> sessionTokenPair = getSessionTokenPair();
+        // Get session ids
         String ids = session("ids");
-        System.out.println(ids);
-        return ws.url("https://api.twitter.com/1.1/users/lookup.json?user_id=338985020")//+ids)
-                .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
-                .get()
-                .map(response -> {
-                    JsonNode respJson = response.asJson();
-                    System.out.println(respJson);
-                    Iterator<JsonNode> jsonIterator = respJson.elements();
-                    String name = "";
-                    String location = "";
-                    while (jsonIterator.hasNext()) {
-                        JsonNode j = jsonIterator.next();
-                        name = j.path("name").toString();
-                        location = j.path("location").toString();
-                    }
-                    JsonNode json = Json.newObject()
-                        .put("name", name)
-                        .put("location", location);
-                    ws.url("http://localhost:9200/friends/test/").post(json);
-                    return redirect(routes.Application.index());
-                });
+         // Check if token is in session
+        if (sessionTokenPair.isDefined()) {
+            // Make a request to twitter API to get a user profile
+            // I can't find how to pass multiple ids either with get or post so I try with one id
+            return ws.url("https://api.twitter.com/1.1/users/lookup.json?user_id=338985020")//+ids)
+                    .sign(new OAuthCalculator(TWITTER_CONS, sessionTokenPair.get()))
+                    .get()
+                    .map(response -> {
+                        // Handle response
+                        JsonNode respJson = response.asJson();
+                        Iterator<JsonNode> jsonIterator = respJson.elements();
+                        String name = "";
+                        String location = "";
+                        // Parse JSON response
+                        while (jsonIterator.hasNext()) {
+                            JsonNode j = jsonIterator.next();
+                            name = j.path("name").toString();
+                            location = j.path("location").toString();
+                        }
+                        // Send post request to elasticsearch to index friends infos
+                        JsonNode json = Json.newObject()
+                            .put("name", name)
+                            .put("location", location);
+                        ws.url(ELASTICSEARCH_URL+"/friends/test/").post(json);
+                        // Redirect user to index
+                        return redirect(routes.Application.index());
+                    
+                    });
+        }
+        else {
+            // No tokens redirect to authentification
+            return Promise.pure(redirect(routes.Application.twitterAuth()));
+        }
     }
 
     public Result deleteContacts() {
-        ws.url("http://localhost:9200/friends/").delete();
+        // Send delete request to elasticsearch
+        ws.url(ELASTICSEARCH_URL+"/friends/").delete();
         return ok(index.render("Your new application is ready."));
     }
 
