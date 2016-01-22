@@ -1,6 +1,7 @@
 package controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import play.Play;
 import play.libs.F.Option;
@@ -18,6 +19,8 @@ import play.mvc.Controller;
 import play.mvc.Result;
 import views.html.index;
 import java.util.Iterator;
+import java.util.*;
+import models.ContactList;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -48,8 +51,24 @@ public class Application extends Controller {
         this.ws = ws;
     }
 
-    public Result index() {
-        return ok(index.render("Your new application is ready."));
+       
+    // @TODO Handle json list
+    public Promise<Result> index() {
+        return ws.url("http://localhost:9200/friends/_search").get().map(
+            response -> {
+                        JsonNode jsonRes = response.asJson();
+                        String jsonString = jsonRes.path("hits").path("hits").toString();
+                        System.out.println("TOTO: "+jsonString);
+                        if (jsonRes.path("total").asText() == "0") {
+                            return ok(index.render("toto"));
+                        }
+                        else {
+                            //ObjectMapper mapper = new ObjectMapper();
+                            //ContactList contactList = mapper.readValue(jsonString, ContactList.class);
+                            return ok(index.render("test"));
+                        }
+                    }
+        );
     }
 
     public Promise<Result> twitterAppOnly() {
@@ -178,7 +197,7 @@ public class Application extends Controller {
                         .put("name", name)
                         .put("location", location);
                     ws.url("http://localhost:9200/friends/test/").post(json);
-                    return ok(index.render(respJson.toString()));
+                    return redirect(routes.Application.index());
                 });
     }
 
